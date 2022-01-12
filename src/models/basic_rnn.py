@@ -1,6 +1,9 @@
 import pandas as pd
 import numpy as np
 import tensorflow as tf
+import imp
+import src.utils.midi_support
+imp.reload(src.utils.midi_support)
 from src.utils.midi_support import MidiSupport, RNNMusicDataSetPreparer, load_midi_objs, load_just_that_one_test_song, download_and_save_data
 from src.utils.visualization import plot_piano_roll, save_audio_file
 import pdb
@@ -1262,86 +1265,31 @@ class RNNMusicExperimentTen(RNNMusicExperiment):
         )
         return model, history
 
+
+class RNNMusicExperimentEleven(RNNMusicExperimentTen):
+    """Same as 10 but training on multiple songs
+
+    Args:
+        RNNMusicExperimentEleven ([type]): [description]
+    """
+
+    def get_name(self):
+        return "Exp10"
+
+    def load_data(self):
+        return self.basic_load_data()
+
 # Main training loop
 if __name__ == "__main__":
     
     learning_rate = 0.001
-    training_epoch = 100
-    for sequence_length in [15]:#, 32]:
-        # print("Trying Exp 1")
-        # exp = RNNMusicExperimentOne(
-        #     sequence_length=sequence_length,
-        #     learning_rate=learning_rate,
-        #     epochs=training_epoch)
-        # exp.run()
+    training_epoch = 1
+    
+    print("Trying Exp 11")
+    exp = RNNMusicExperimentEleven(num_music_files=10)
+    exp.run()
 
-        
-        # print("Trying Exp 2")
-        # exp = RNNMusicExperimentTwo(
-        #     sequence_length=sequence_length,
-        #     learning_rate=learning_rate,
-        #     epochs=training_epoch)
-        # exp.run()
-
-        # print("Trying Exp 3")
-        # exp = RNNMusicExperimentThreee(
-        #     learning_rate=0.01,
-        #     epochs=1,
-        #     batch_size=1,
-        #     num_music_files=1)
-        # exp.run()
-
-        # print("Trying Exp 6")
-        # exp = RNNMusicExperimentTFRef(
-        #     learning_rate=0.005,
-        #     epochs=3,
-        #     batch_size=64,
-        #     num_music_files=5,
-        #     sequence_length=25,
-        # )
-        # exp.run()
-        
-        print("Trying Exp 5")
-        exp = RNNMusicExperimentFive(
-            learning_rate=0.01,
-            epochs=3,
-            batch_size=1,
-            num_music_files=1)
-        exp.run()
-
-        print("Exp 5 predicting with 31 beats")
-        exp.common_config["num_beats_for_prediction"] = 31
-        exp.predict_and_save_data()
-
-        print("Exp 5 predicting with 15 beats")
-        exp.common_config["num_beats_for_prediction"] = 15
-        exp.predict_and_save_data()
-
-        print("Exp 5 predicting with 3 beats")
-        exp.common_config["num_beats_for_prediction"] = 3
-        exp.predict_and_save_data()
-
-        print("Trying Exp 4")
-        exp = RNNMusicExperimentFour(
-            learning_rate=0.01,
-            epochs=3,
-            batch_size=1,
-            num_music_files=5,
-        )
-        exp.run()
-
-        print("Exp 5 predicting with 31 beats")
-        exp.common_config["num_beats_for_prediction"] = 31
-        exp.predict_and_save_data()
-
-        print("Exp 5 predicting with 15 beats")
-        exp.common_config["num_beats_for_prediction"] = 15
-        exp.predict_and_save_data()
-
-        print("Exp 5 predicting with 3 beats")
-        exp.common_config["num_beats_for_prediction"] = 3
-        exp.predict_and_save_data()
-        
+    
         
 
 
