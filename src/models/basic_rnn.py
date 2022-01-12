@@ -237,6 +237,73 @@ def model_7_google(learning_rate=0.005, seq_length=25):
     
     return model, None
 
+class SwapLayer(tf.keras.layers.Layer):
+    def __init__(self):
+        super(SwapLayer, self).__init__()
+
+    def call(self, orig_tensor, training=None):
+        swapped = tf.transpose(orig_tensor, [1, 0, 2])
+        return swapped
+
+def model_note_time(learning_rate=0.001, total_vicinity=53, dropout=0, recurrent_dropout=0):
+
+    elements_per_time_step = 128
+
+    # Time layers get input:
+    # [Batch(notes total 128 batches), beats(whatever our total song length is), architecture dimension]
+    input_shape = (elements_per_time_step, total_vicinity)
+    input_shape_b = (elements_per_time_step, 2)
+
+    model = tf.keras.Sequential()
+
+    # Time layers get input:
+    # Recursion along time dimension
+    # Note from Daniel Johnson Code: " # time_inputs is a matrix (time, batch/note, input_per_note)" 
+    #                 Tensorflow wants batch as 0th dimension=>  (batch/note, time, input_per_note)
+    #                         batch dimension is where all our extra data goes. Notes are added here
+    # For a batch_amount of notes, we take an arbitrarly length time segment and train. In the batch dimensions we have the other notes for this segment and the other segments
+    # [batch_amount of notes (should be 128), beats(arbitrary time sequence), architecture dimension]
+    input_a = tf.keras.Input(shape=input_shape,  name="input_a")
+    input_b = tf.keras.Input(shape=input_shape_b, name="input_b")
+
+    mod_time = SwapLayer()(input_a)
+    mod_time = tf.keras.layers.LSTM(200, return_sequences=True, dropout=dropout, recurrent_dropout=recurrent_dropout, stateful=False)(mod_time)
+    mod_time = SwapLayer()(mod_time)
+    mod_time = tf.keras.Model(inputs=input_a, outputs=mod_time)
+    # model.add(tf.keras.layers.LSTM(200,  unroll=True, return_sequences=True, dropout=dropout, recurrent_dropout=recurrent_dropout, stateful=True))
+    
+
+    combined = tf.keras.layers.concatenate([mod_time.output, input_b])
+
+    
+
+    mod_notes = tf.keras.layers.LSTM(100, return_sequences=True, dropout=dropout, stateful=False)(combined)
+    mod_notes = tf.keras.layers.TimeDistributed(tf.keras.layers.Dense(2, activation="sigmoid"))(mod_notes)
+    # mod_notes = SwapLayer()(mod_notes)
+    
+
+    model = tf.keras.Model(inputs=[input_a, input_b], outputs=[mod_notes])
+
+    model.summary()
+
+    optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
+    loss = tf.keras.losses.BinaryCrossentropy(from_logits=False)
+    model.compile(
+            loss=loss,
+            optimizer=optimizer,
+            # metrics=[tf.keras.metrics.BinaryCrossentropy()
+            metrics=["mse"
+            ]
+        )
+
+    class haltCallback(tf.keras.callbacks.Callback):
+        def on_batch_end(self, batch, logs={}):
+            if(logs.get('loss') <= 0.04):
+                print("\n\n\nReached 0.04 loss value so cancelling training!\n\n\n")
+                self.model.stop_training = True
+
+    return model, haltCallback()
+
 def predict_notes_256_sigmoid(model, train_data, size=10):
     """Predict notes
 
@@ -522,6 +589,114 @@ def predict_notes_note_invariant_plus_extras_multiple_time_steps(model, reshaped
     outputs_joined = pd.DataFrame(outputs)
     all_probs_joined = pd.DataFrame(all_probs)
     return outputs_joined, all_probs_joined
+
+def predict_time_note_model(model, prepared_training_data, size=16):
+    reshaped_train_data = prepared_training_data
+    num_beats=128
+    num_notes = 128
+    total_vicinity = 53
+    note_vicinity=24
+    
+    outputs = []
+    all_probs = []
+    
+    # offset = np.random.choice(range(len(reshaped_train_data)))
+    offset = 0
+
+    input_notes_reshape = reshaped_train_data[offset+1:offset+1+num_beats, :, :]
+    input_notes_b_reshape = reshaped_train_data[offset:offset+num_beats, :, 12:14]
+
+    last_beats =[str(x) for x in input_notes_reshape[-1, -1, -4:]]
+    last_beats_int = int("".join(last_beats), 2)
+
+
+    for l in range(size):
+
+        out_arr = np.zeros((num_notes,2))
+        probs_arr = np.zeros((num_notes,2))
+
+    
+        for i in range(num_notes):
+            
+            if i == 0:
+                probs = model.predict([input_notes_reshape, input_notes_b_reshape], batch_size=128)
+                
+                # Sub Model
+                intermediate_layer_model = tf.keras.Model(inputs=model.input,
+                                                outputs=model.layers[3].output)
+                intermediate_output = intermediate_layer_model.predict([input_notes_reshape, input_notes_b_reshape], batch_size=128)
+                input_shape = (128, 200)
+                sub_model = tf.keras.Sequential()
+                new_input = tf.keras.Input(shape=input_shape,  name="new_input")
+                old_input_b = model.layers[4]
+                concat_lay = model.layers[5]([new_input, old_input_b.output])
+                mod_notes = model.layers[6](concat_lay)
+                mod_notes = model.layers[7](mod_notes)
+                sub_model = tf.keras.Model(inputs=[new_input, old_input_b.input], outputs=[mod_notes])
+
+            else:
+                probs = sub_model.predict([intermediate_output[-1:, :, :], input_notes_b_reshape[-1:, :, :]], batch_size=128)
+        
+            last_new_play_artic_probs = probs[-1, i, :]
+            last_new_play_artic = np.random.binomial(1, last_new_play_artic_probs, size=None).reshape((1, 2))
+            
+
+            if i < (num_notes - 1):
+                input_notes_b_reshape[-1, i:i+1, :] = last_new_play_artic
+            else:
+                input_notes_b_reshape = np.concatenate([input_notes_b_reshape[1:, :, :], np.zeros((1, num_beats, 2))], axis=0)
+
+            probs_arr[i, 0] = last_new_play_artic_probs[0]
+            probs_arr[i, 1] = last_new_play_artic_probs[1]
+            out_arr[i, 0] = last_new_play_artic[0, 0]
+            out_arr[i, 1] = last_new_play_artic[0, 1]
+
+
+        out = out_arr.reshape((256,1))
+        probs = probs_arr.reshape((256,1))
+
+
+        # Need to window across out to get the input form again.
+        out = out.reshape((256,1))
+        probs = probs.reshape((256,))
+        outputs.append(out.reshape(256,))
+        all_probs.append(probs)
+
+        # note_vicinity = total_vicinity-4-12-12-1
+        next_pred, _, _ = MidiSupport().windowed_data_across_notes_time(out, mask_length_x=note_vicinity, return_labels=False)# Return (total_vicinity, 128)
+
+        # Get array of Midi values for each note value
+        n_notes = 128
+        midi_row = MidiSupport().add_midi_value(next_pred, n_notes)
+
+        # Get array of one hot encoded pitch values for each note value
+        pitchclass_rows = MidiSupport().calculate_pitchclass(midi_row, next_pred)
+
+        # Add total_pitch count repeated for each note window
+        previous_context = MidiSupport().build_context(next_pred, midi_row, pitchclass_rows)
+
+        midi_row = midi_row.reshape((1, -1))
+        next_pred = np.vstack((next_pred, midi_row, pitchclass_rows, previous_context))
+        
+        last_beats_int += 1
+        last_beats_int = last_beats_int%16
+        next_beats_ind = np.array([int(x) for x in bin(last_beats_int)[2:].zfill(4)])
+        next_beats_ind = next_beats_ind.reshape((4, 1))
+        next_beats_ind = np.repeat(next_beats_ind, num_notes, axis=1)
+
+        # TODO, check if beat is correctly increasing: might need to flip it before adding
+        last_new_note = np.concatenate([next_pred, next_beats_ind])
+        last_new_note = last_new_note[np.newaxis, :, :] # Shape now  (1, 28, 128)
+        last_new_note = np.swapaxes(last_new_note, 1, 2) # Shape now  (1, 128, 28)
+        # last_new_note = np.swapaxes(last_new_note, 0, 1) # Shape now  (128, 1, 28)
+        
+        together = np.concatenate([input_notes_reshape[1:, :, :], last_new_note], axis=0)
+        input_notes_reshape = together
+
+    outputs_joined = pd.DataFrame(outputs)
+    all_probs_joined = pd.DataFrame(all_probs)
+    return outputs_joined, all_probs_joined
+
 
 
 class RNNMusicExperiment():
@@ -1022,6 +1197,70 @@ class RNNMusicExperimentTFRef(RNNMusicExperiment):
         generated_notes = pd.DataFrame(generated_notes, columns=(*self.key_order, 'start', 'end'))
         return generated_notes, None
 
+
+class RNNMusicExperimentTen(RNNMusicExperiment):
+    """Exp using time / note network
+
+    Args:
+        RNNMusicExperimentTen ([type]): [description]
+    """
+
+    def get_name(self):
+        return "Exp10"
+
+    def run(self):
+        self.set_model()
+        loaded_midi = self.load_data()
+        self.prepared_data = self.prepare_data(loaded_midi)
+        print("Training...")
+        self.model, self.history = self.train_model(self.prepared_data)
+        self.predict_and_save_data()
+
+    def predict_and_save_data(self, str_id=""):
+
+        print("Predicting data...")
+        predicted, probs = self.predict_data(self.model, self.prepared_data)
+        print("Saving data...")
+        self.plot_and_save_predicted_data(predicted, str_id + "_predicted_")
+        self.plot_and_save_predicted_data(probs, str_id + "_probs_")
+        self.create_and_save_predicted_audio(predicted, str_id + "_music_")
+        # Save music file?
+        # Save music output plot?
+
+    def prepare_data(self, loaded_data):
+        #seq_ds is in form X, y here
+        X, y = MidiSupport().prepare_song_note_invariant_plus_beats_and_more(loaded_data, vicinity=24)
+        self.X_before_window = X
+        seq_ds = MidiSupport().prepare_windowed_for_note_time_invariant(X, seq_length=128)
+        return seq_ds
+
+    def predict_data(self, model, prepared_data):
+        return predict_time_note_model(
+            model,
+            self.X_before_window,
+            size=128)
+
+    def set_model(self):
+        self.model, self.callbacks = model_note_time(
+            learning_rate=0.001
+        )
+
+    def load_data(self):
+        loaded = load_just_that_one_test_song(
+            num_files=1,
+            seq_length=128,
+            )
+        return loaded
+
+    def train_model(self, prepared_data):
+        model, callbacks = self.model, self.callbacks
+        
+        history = model.fit(
+            prepared_data,
+            epochs=1,
+            callbacks=callbacks,
+        )
+        return model, history
 
 # Main training loop
 if __name__ == "__main__":

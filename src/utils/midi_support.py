@@ -368,6 +368,39 @@ class MidiSupport():
         X, y = self.transform_beats_to_batch(X, y, elements_per_time_step)
         return X, y
 
+    def prepare_windowed_for_note_time_invariant(self, X, seq_length=15):
+        X_tensor = tf.convert_to_tensor(X)
+
+        dataset = tf.data.Dataset.from_tensor_slices(X_tensor)
+        seq_length = seq_length + 2
+        windows = dataset.window(seq_length,
+                                    shift=1,
+                                    stride=1,
+                                    drop_remainder=True)
+
+        sequences = windows.flat_map(lambda x: x.batch(seq_length, drop_remainder=True))
+
+        # Split the labels
+        def split_labels(sequences):
+            
+            inputs = sequences[1:-1, :, :]
+            # Note 12:14 comes from architecture. first 24 elements are the vicinity. Label is in the middle
+            labels = sequences[2:, :, 12:14]
+            yyy_other = sequences[:-2, :, 12:14]
+            return (inputs, yyy_other), labels
+
+        seq_ds = sequences.map(split_labels)
+                                # num_parallel_calls=tf.data.AUTOTUNE)
+
+        return seq_ds
+
+    def prepare_song_time_note_invariant_plus_beats_and_more(
+            self, all_midi_objs, vicinity=24, seq_length=128):
+        X, y = self.prepare_song_note_invariant_plus_beats_and_more(all_midi_objs, vicinity=vicinity)
+        seq_ds = self.prepare_windowed_for_note_time_invariant(X, seq_length=seq_length)
+        return seq_ds
+
+
     def prepare_song(self, midi_obj):
         samp_f = 100
         beats_together = [
