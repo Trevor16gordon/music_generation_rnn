@@ -1,5 +1,5 @@
 
-![Model](https://github.com/Trevor16gordon/music_generation_rnn/blob/trevor_develop/images/model_training_arch.jpg)
+![Model](https://github.com/Trevor16gordon/music_generation_rnn/blob/trevor_develop/images/model_overview.jpg)
 
 # Music Generation RNN
 This repository is on a project to generate music using a biaxial recurrent neural network. The project is inspired by this [research paper by Daniel J. Johnson](https://link.springer.com/chapter/10.1007/978-3-319-55750-2_9). The code is intended to replicate the orginial model as closely as possible using TensorFlow 2.0. The model uses LSTM layers and a convolution-like reshaping of the input to predict which notes will be played when. 
