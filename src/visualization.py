@@ -1,5 +1,5 @@
 import matplotlib.pyplot as plt
-from src.midi_support import MidiSupport
+from src.midi_support import MusicDataPreparer
 from IPython import display
 
 def note_and_artic_to_one(data, what="artic"):
@@ -58,7 +58,7 @@ def save_audio_file(predicted, filepath, audio_type="artic", fs=5):
     if audio_type not in ["artic", "note_hold"]:
         raise KeyError("what needs to be artic or note_hold")
     data = note_and_artic_to_one(predicted, what=audio_type)
-    new_midi = MidiSupport().piano_roll_to_pretty_midi(data, fs=fs)
+    new_midi = MusicDataPreparer().piano_roll_to_pretty_midi(data, fs=fs)
     _SAMPLING_RATE = 16000
     seconds = 30
     waveform = new_midi.fluidsynth(fs=_SAMPLING_RATE)

@@ -13,7 +13,7 @@ import pandas as pd
 import numpy as np
 import tensorflow as tf
 from src.midi_support import (
-    MidiSupport,
+    MusicDataPreparer,
     RNNMusicDataSetPreparer,
     load_midi_objs,
     load_nottingham_objs,
@@ -213,11 +213,11 @@ class RNNMusicExperimentTen(RNNMusicExperiment):
         self.create_and_save_predicted_audio(self.predicted, str_id + "_music_")
 
     def prepare_data(self, loaded_data):
-        X, y = MidiSupport().prepare_song_note_invariant_plus_beats_and_more(
+        X, y = MusicDataPreparer().prepare_song_note_invariant_plus_beats_and_more(
             loaded_data, vicinity=24
         )
         self.X_before_window = X
-        seq_ds = MidiSupport().prepare_windowed_for_note_time_invariant(
+        seq_ds = MusicDataPreparer().prepare_windowed_for_note_time_invariant(
             X, seq_length=128
         )
         seq_ds.shuffle(buffer_size=10)
@@ -225,7 +225,8 @@ class RNNMusicExperimentTen(RNNMusicExperiment):
 
     def predict_data(self, model, prepared_data):
         return predict_time_note_model(
-            model, self.X_before_window, dropout=self.common_config["dropout"], size=10
+            model, self.X_before_window, dropout=self.common_config["dropout"], 
+            size=self.common_config["seq_length"]
         )
 
     def set_model(self):
@@ -233,7 +234,7 @@ class RNNMusicExperimentTen(RNNMusicExperiment):
             learning_rate=0.001,
             dropout=self.common_config["dropout"],
         )
-        self.callbacks = haltCallback(0.4)
+        self.callbacks = haltCallback(0.04)
 
     def load_data(self):
         loaded = load_just_that_one_test_song(

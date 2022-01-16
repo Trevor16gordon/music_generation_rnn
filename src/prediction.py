@@ -1,13 +1,13 @@
 import numpy as np
 import pandas as pd
-from src.midi_support import MidiSupport
+from src.midi_support import MusicDataPreparer
 from src.models import NoteTimeMusicPredictionRNN, NoteTimeMusicPredictionRNNShallow
 
 
 def predict_time_note_model(model, prepared_training_data, size=16, dropout=0):
     """Predict music sequence.
 
-    This function starts with training data output from MidiSupport().prepare_song_note_invariant_plus_beats_and_more.
+    This function starts with training data output from MusicDataPreparer().prepare_song_note_invariant_plus_beats_and_more.
 
     - Randomly select a 128 music sequence length from prepared_training_data
     - For prediction in size:
@@ -21,7 +21,7 @@ def predict_time_note_model(model, prepared_training_data, size=16, dropout=0):
 
     Args:
         model (NoteTimeMusicPredictionRNN): TF model for prediction
-        prepared_training_data (np.array): Prepared data according to MidiSupport().prepare_song_note_invariant_plus_beats_and_more
+        prepared_training_data (np.array): Prepared data according to MusicDataPreparer().prepare_song_note_invariant_plus_beats_and_more
         size (int, optional): Output prediction sequence length. Defaults to 16.
         dropout (float, optional): Training dropout to account for in output probabilities. Defaults to 0.
 
@@ -119,19 +119,19 @@ def predict_time_note_model(model, prepared_training_data, size=16, dropout=0):
         all_probs.append(probs)
 
         # note_vicinity = total_vicinity-4-12-12-1
-        next_pred, _, _ = MidiSupport().windowed_data_across_notes_time(
+        next_pred, _, _ = MusicDataPreparer().windowed_data_across_notes_time(
             out, mask_length_x=note_vicinity, return_labels=False
         )  # Return (total_vicinity, 128)
 
         # Get array of Midi values for each note value
         n_notes = 128
-        midi_row = MidiSupport().add_midi_value(next_pred, n_notes)
+        midi_row = MusicDataPreparer().add_midi_value(next_pred, n_notes)
 
         # Get array of one hot encoded pitch values for each note value
-        pitchclass_rows = MidiSupport().calculate_pitchclass(midi_row, next_pred)
+        pitchclass_rows = MusicDataPreparer().calculate_pitchclass(midi_row, next_pred)
 
         # Add total_pitch count repeated for each note window
-        previous_context = MidiSupport().build_context(
+        previous_context = MusicDataPreparer().build_context(
             next_pred, midi_row, pitchclass_rows
         )
 

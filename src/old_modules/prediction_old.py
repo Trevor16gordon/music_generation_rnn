@@ -107,7 +107,7 @@ def predict_notes_note_invariant(model, reshaped_train_data, size=10):
         )
         all_probs.append(probs)
 
-        next_pred, _, _ = MidiSupport().windowed_data_across_notes_time(
+        next_pred, _, _ = MusicDataPreparer().windowed_data_across_notes_time(
             out, mask_length_x=24, return_labels=False
         )  # Return (24, 128)
 
@@ -197,19 +197,19 @@ def predict_notes_note_invariant_plus_extras(model, reshaped_train_data, size=10
 
         # this_vicin = total_vicinity-4-12-12-1
         this_vicin = 24
-        next_pred, _, _ = MidiSupport().windowed_data_across_notes_time(
+        next_pred, _, _ = MusicDataPreparer().windowed_data_across_notes_time(
             out, mask_length_x=this_vicin, return_labels=False
         )  # Return (total_vicinity, 128)
 
         # Get array of Midi values for each note value
         n_notes = 128
-        midi_row = MidiSupport().add_midi_value(next_pred, n_notes)
+        midi_row = MusicDataPreparer().add_midi_value(next_pred, n_notes)
 
         # Get array of one hot encoded pitch values for each note value
-        pitchclass_rows = MidiSupport().calculate_pitchclass(midi_row, next_pred)
+        pitchclass_rows = MusicDataPreparer().calculate_pitchclass(midi_row, next_pred)
 
         # Add total_pitch count repeated for each note window
-        previous_context = MidiSupport().build_context(
+        previous_context = MusicDataPreparer().build_context(
             next_pred, midi_row, pitchclass_rows
         )
 
@@ -276,19 +276,19 @@ def predict_notes_note_invariant_plus_extras_multiple_time_steps(
         all_probs.append(probs)
 
         # note_vicinity = total_vicinity-4-12-12-1
-        next_pred, _, _ = MidiSupport().windowed_data_across_notes_time(
+        next_pred, _, _ = MusicDataPreparer().windowed_data_across_notes_time(
             out, mask_length_x=note_vicinity, return_labels=False
         )  # Return (total_vicinity, 128)
 
         # Get array of Midi values for each note value
         n_notes = 128
-        midi_row = MidiSupport().add_midi_value(next_pred, n_notes)
+        midi_row = MusicDataPreparer().add_midi_value(next_pred, n_notes)
 
         # Get array of one hot encoded pitch values for each note value
-        pitchclass_rows = MidiSupport().calculate_pitchclass(midi_row, next_pred)
+        pitchclass_rows = MusicDataPreparer().calculate_pitchclass(midi_row, next_pred)
 
         # Add total_pitch count repeated for each note window
-        previous_context = MidiSupport().build_context(
+        previous_context = MusicDataPreparer().build_context(
             next_pred, midi_row, pitchclass_rows
         )
 

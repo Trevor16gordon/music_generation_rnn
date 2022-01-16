@@ -1,11 +1,8 @@
 import pandas as pd
 import numpy as np
 import tensorflow as tf
-import imp
-import src.utils.midi_support
-imp.reload(src.utils.midi_support)
-from src.utils.midi_support import MidiSupport, RNNMusicDataSetPreparer, load_midi_objs, load_nottingham_objs, load_just_that_one_test_song, download_and_save_data
-from src.utils.visualization import plot_piano_roll, save_audio_file
+from src.midi_support import MusicDataPreparer, RNNMusicDataSetPreparer, load_midi_objs, load_nottingham_objs, load_just_that_one_test_song, download_and_save_data
+from src.visualization import plot_piano_roll, save_audio_file
 import pdb
 from datetime import datetime
 
@@ -409,7 +406,7 @@ def predict_notes_note_invariant(model, reshaped_train_data, size=10):
         outputs.append(out.reshape(256,))
         all_probs.append(probs)
 
-        next_pred, _, _ = MidiSupport().windowed_data_across_notes_time(out, mask_length_x=24, return_labels=False)# Return (24, 128)
+        next_pred, _, _ = MusicDataPreparer().windowed_data_across_notes_time(out, mask_length_x=24, return_labels=False)# Return (24, 128)
 
         #*******
 
@@ -492,17 +489,17 @@ def predict_notes_note_invariant_plus_extras(model, reshaped_train_data, size=10
 
         # this_vicin = total_vicinity-4-12-12-1
         this_vicin = 24
-        next_pred, _, _ = MidiSupport().windowed_data_across_notes_time(out, mask_length_x=this_vicin, return_labels=False)# Return (total_vicinity, 128)
+        next_pred, _, _ = MusicDataPreparer().windowed_data_across_notes_time(out, mask_length_x=this_vicin, return_labels=False)# Return (total_vicinity, 128)
 
         # Get array of Midi values for each note value
         n_notes = 128
-        midi_row = MidiSupport().add_midi_value(next_pred, n_notes)
+        midi_row = MusicDataPreparer().add_midi_value(next_pred, n_notes)
 
         # Get array of one hot encoded pitch values for each note value
-        pitchclass_rows = MidiSupport().calculate_pitchclass(midi_row, next_pred)
+        pitchclass_rows = MusicDataPreparer().calculate_pitchclass(midi_row, next_pred)
 
         # Add total_pitch count repeated for each note window
-        previous_context = MidiSupport().build_context(next_pred, midi_row, pitchclass_rows)
+        previous_context = MusicDataPreparer().build_context(next_pred, midi_row, pitchclass_rows)
 
         midi_row = midi_row.reshape((1, -1))
         next_pred = np.vstack((next_pred, midi_row, pitchclass_rows, previous_context))
@@ -562,17 +559,17 @@ def predict_notes_note_invariant_plus_extras_multiple_time_steps(model, reshaped
         all_probs.append(probs)
 
         # note_vicinity = total_vicinity-4-12-12-1
-        next_pred, _, _ = MidiSupport().windowed_data_across_notes_time(out, mask_length_x=note_vicinity, return_labels=False)# Return (total_vicinity, 128)
+        next_pred, _, _ = MusicDataPreparer().windowed_data_across_notes_time(out, mask_length_x=note_vicinity, return_labels=False)# Return (total_vicinity, 128)
 
         # Get array of Midi values for each note value
         n_notes = 128
-        midi_row = MidiSupport().add_midi_value(next_pred, n_notes)
+        midi_row = MusicDataPreparer().add_midi_value(next_pred, n_notes)
 
         # Get array of one hot encoded pitch values for each note value
-        pitchclass_rows = MidiSupport().calculate_pitchclass(midi_row, next_pred)
+        pitchclass_rows = MusicDataPreparer().calculate_pitchclass(midi_row, next_pred)
 
         # Add total_pitch count repeated for each note window
-        previous_context = MidiSupport().build_context(next_pred, midi_row, pitchclass_rows)
+        previous_context = MusicDataPreparer().build_context(next_pred, midi_row, pitchclass_rows)
 
         midi_row = midi_row.reshape((1, -1))
         next_pred = np.vstack((next_pred, midi_row, pitchclass_rows, previous_context))
@@ -670,17 +667,17 @@ def predict_time_note_model(model, prepared_training_data, size=16, dropout=0):
         all_probs.append(probs)
 
         # note_vicinity = total_vicinity-4-12-12-1
-        next_pred, _, _ = MidiSupport().windowed_data_across_notes_time(out, mask_length_x=note_vicinity, return_labels=False)# Return (total_vicinity, 128)
+        next_pred, _, _ = MusicDataPreparer().windowed_data_across_notes_time(out, mask_length_x=note_vicinity, return_labels=False)# Return (total_vicinity, 128)
 
         # Get array of Midi values for each note value
         n_notes = 128
-        midi_row = MidiSupport().add_midi_value(next_pred, n_notes)
+        midi_row = MusicDataPreparer().add_midi_value(next_pred, n_notes)
 
         # Get array of one hot encoded pitch values for each note value
-        pitchclass_rows = MidiSupport().calculate_pitchclass(midi_row, next_pred)
+        pitchclass_rows = MusicDataPreparer().calculate_pitchclass(midi_row, next_pred)
 
         # Add total_pitch count repeated for each note window
-        previous_context = MidiSupport().build_context(next_pred, midi_row, pitchclass_rows)
+        previous_context = MusicDataPreparer().build_context(next_pred, midi_row, pitchclass_rows)
 
         midi_row = midi_row.reshape((1, -1))
         next_pred = np.vstack((next_pred, midi_row, pitchclass_rows, previous_context))
@@ -834,7 +831,7 @@ class RNNMusicExperimentOne(RNNMusicExperiment):
         return self.basic_load_data()
 
     def prepare_data(self, midi_objs):
-        play_articulated = MidiSupport().all_midi_obj_to_play_articulate(midi_objs)
+        play_articulated = MusicDataPreparer().all_midi_obj_to_play_articulate(midi_objs)
         seq_ds = RNNMusicDataSetPreparer().prepare(play_articulated.T, seq_length=self.common_config["seq_length"])
         # TODO: Some models return a DataSet and some return X_train, y_train
         return seq_ds
@@ -914,7 +911,7 @@ class RNNMusicExperimentThree(RNNMusicExperiment):
 
     def prepare_data(self, loaded_data):
         #seq_ds is in form X, y here
-        seq_ds = MidiSupport().prepare_song_note_invariant_plus_beats(loaded_data)
+        seq_ds = MusicDataPreparer().prepare_song_note_invariant_plus_beats(loaded_data)
         # TODO: Some models return a DataSet and some return X_train, y_train
         return seq_ds
         
@@ -979,7 +976,7 @@ class RNNMusicExperimentFour(RNNMusicExperiment):
 
     def prepare_data(self, loaded_data):
         #seq_ds is in form X, y here
-        seq_ds = MidiSupport().prepare_song_note_invariant_plus_beats_and_more(loaded_data)
+        seq_ds = MusicDataPreparer().prepare_song_note_invariant_plus_beats_and_more(loaded_data)
         # TODO: Some models return a DataSet and some return X_train, y_train
         return seq_ds
         
@@ -1024,7 +1021,7 @@ class RNNMusicExperimentSeven(RNNMusicExperimentFive):
 
     def prepare_data(self, loaded_data):
         #seq_ds is in form X, y here
-        seq_ds = MidiSupport().prepare_song_note_invariant_plus_beats_and_more(loaded_data, vicinity=self.common_config["note_vicinity"])
+        seq_ds = MusicDataPreparer().prepare_song_note_invariant_plus_beats_and_more(loaded_data, vicinity=self.common_config["note_vicinity"])
         # TODO: Some models return a DataSet and some return X_train, y_train
         return seq_ds
 
@@ -1107,7 +1104,7 @@ class RNNMusicExperimentTFRef(RNNMusicExperiment):
         
         all_notes = []
         for f in loaded_data[:num_files]:
-            notes = MidiSupport().midi_to_notes(f)
+            notes = MusicDataPreparer().midi_to_notes(f)
             all_notes.append(notes)
 
         all_notes = pd.concat(all_notes)
@@ -1241,9 +1238,9 @@ class RNNMusicExperimentTen(RNNMusicExperiment):
 
     def prepare_data(self, loaded_data):
         #seq_ds is in form X, y here
-        X, y = MidiSupport().prepare_song_note_invariant_plus_beats_and_more(loaded_data, vicinity=24)
+        X, y = MusicDataPreparer().prepare_song_note_invariant_plus_beats_and_more(loaded_data, vicinity=24)
         self.X_before_window = X
-        seq_ds = MidiSupport().prepare_windowed_for_note_time_invariant(X, seq_length=128)
+        seq_ds = MusicDataPreparer().prepare_windowed_for_note_time_invariant(X, seq_length=128)
         seq_ds.shuffle(buffer_size=10)
         return seq_ds
 
@@ -1277,7 +1274,6 @@ class RNNMusicExperimentTen(RNNMusicExperiment):
         )
         return model, history
         
-
 
 class RNNMusicExperimentEleven(RNNMusicExperimentTen):
     """Same as 10 but training on multiple songs

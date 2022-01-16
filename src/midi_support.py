@@ -12,7 +12,7 @@ import pdb
 import collections
 import fluidsynth
 
-class MidiSupport():
+class MusicDataPreparer():
     def __init__(self):
         pass
 
@@ -400,7 +400,6 @@ class MidiSupport():
         seq_ds = self.prepare_windowed_for_note_time_invariant(X, seq_length=seq_length)
         return seq_ds
 
-
     def prepare_song(self, midi_obj):
         samp_f = 100
         beats_together = [
@@ -551,90 +550,6 @@ class MidiSupport():
         return pm
 
 
-class RNNMusicDataSetPreparer():
-    def __init__(self) -> None:
-        pass
-
-    def prepare(self, all_song_dfs, seq_length=15):
-
-
-        print(f"tst all_song_dfs.shape in is {all_song_dfs.shape}")
-        all_song_dfs = MidiSupport().add_beat_location_other(all_song_dfs)
-        # all_song_dfs = all_song_dfs.T
-
-        print(f"all_song_dfs.shape in is {all_song_dfs.shape}")
-        song_tensor = tf.convert_to_tensor(all_song_dfs)
-        # song_tensor_reshape = tf.reshape(song_tensor, (6261, 128))
-        dataset = tf.data.Dataset.from_tensor_slices(song_tensor)
-        vocab_size = 128
-        """Returns TF Dataset of sequence and label examples."""
-        seq_length = seq_length + 1
-
-        # Take 1 extra for the labels
-        windows = dataset.window(seq_length,
-                                 shift=1,
-                                 stride=1,
-                                 drop_remainder=True)
-
-        # `flat_map` flattens the" dataset of datasets" into a dataset of tensors
-        flatten = lambda x: x.batch(seq_length, drop_remainder=True)
-        sequences = windows.flat_map(flatten)
-
-        # Normalize note pitch
-        def scale_pitch(x):
-            x = x / vocab_size
-            return x
-
-        # Split the labels
-        def split_labels(sequences):
-            inputs = sequences[:-1]
-            print(f"sequences.shape is {sequences.shape}")
-            # labels_dense = sequences[-1][0]
-            labels_dense = tf.reshape(sequences[-1][0:256], (256, 1))
-            return inputs, {"pitch": labels_dense}
-
-        seq_ds = sequences.map(split_labels,
-                               num_parallel_calls=tf.data.AUTOTUNE)
-
-        X_tst, y_tst = list(seq_ds.take(1))[0]
-        print(f"X_tst.shape out is {X_tst.shape}")
-        print(f"y_tst.shape out is {X_tst.shape}")
-
-        return seq_ds
-    
-    def create_sequences(
-        self,
-        dataset: tf.data.Dataset, 
-        seq_length: int,
-        vocab_size = 128,
-        key_order = list,
-    ) -> tf.data.Dataset:
-        """Returns TF Dataset of sequence and label examples. This function is copied from Tensorflow and is only used to replicate the music prediction model in the TensorFlow tutorial (https://www.tensorflow.org/tutorials/audio/music_generation). """
-        seq_length = seq_length+1
-
-        # Take 1 extra for the labels
-        windows = dataset.window(seq_length, shift=1, stride=1,
-        drop_remainder=True)
-
-        # `flat_map` flattens the" dataset of datasets" into a dataset of tensors
-        flatten = lambda x: x.batch(seq_length, drop_remainder=True)
-        sequences = windows.flat_map(flatten)
-
-        # Normalize note pitch
-        def scale_pitch(x):
-            x = x/[vocab_size,1.0,1.0]
-            return x
-
-        # Split the labels
-        def split_labels(sequences):
-            inputs = sequences[:-1]
-            labels_dense = sequences[-1]
-            labels = {key:labels_dense[i] for i,key in enumerate(key_order)}
-
-            return scale_pitch(inputs), labels
-
-        return sequences.map(split_labels, num_parallel_calls=tf.data.AUTOTUNE)
-
 def display_audio(pm: pretty_midi.PrettyMIDI, seconds=30):
     '''
     This function is copied from the TensorFlow tutorial for music generation (https://www.tensorflow.org/tutorials/audio/music_generation).
@@ -668,7 +583,7 @@ def load_midi_objs(data_dir="", num_files=15, seq_length=15):
     if len(filenames) == 0:
         raise Exception("Couldn't find the downloaded data :(")
 
-    ms = MidiSupport()
+    ms = MusicDataPreparer()
     midi_objs = []
     for f in filenames[:num_files]:
         mf_i = ms.load_midi_file(f)
@@ -684,7 +599,7 @@ def load_nottingham_objs(data_dir="", num_files=15, seq_length=15):
     if len(filenames) == 0:
         raise Exception("Couldn't find the downloaded data :(")
 
-    ms = MidiSupport()
+    ms = MusicDataPreparer()
     midi_objs = []
     for f in filenames[:num_files]:
         try:
@@ -704,7 +619,7 @@ def load_just_that_one_test_song(data_dir="", num_files=15, seq_length=15):
             "Couldn't specific file 'mpkou9t' that this experiment is based on. Please download with terminal command wget \"https://tinyurl.com/mpkou9t\""
         )
 
-    ms = MidiSupport()
+    ms = MusicDataPreparer()
 
     num_files = num_files
     midi_objs = []
@@ -722,7 +637,7 @@ def load_just_that_one_test_song(data_dir="", num_files=15, seq_length=15):
 
 if __name__ == "__main__":
 
-    ms = MidiSupport()
+    ms = MusicDataPreparer()
 
     mf = ms.load_midi_file(
         "music_generation_rnn/data/Alan_Walker_Faded.midi")
