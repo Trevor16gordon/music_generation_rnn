@@ -11,6 +11,12 @@ Original paper: https://link.springer.com/chapter/10.1007/978-3-319-55750-2_9
 Blog: https://www.danieldjohnson.com/2015/08/03/composing-music-with-recurrent-neural-networks/
 
 ## This Repo
-
+- main.py: Entry to the most recent best model.
+- experiments: Top level entry that combines models with loading specic data, preparing and predicting
+- data_preparation: Functions for preparing data for all models
+- models: Contains the tensorflow models
+- prediction: Contains functions for generation music from trained models
+- visualization: Creating plots and saving audio for piano roll
+- old_modules: Code for experiments that build up to final model. Not supporting right now.
 
 
