@@ -9,16 +9,12 @@ In this model Experiments 1 - 9 are experiments that build up to the final model
 10 and 11 differ in which music is loaded.
 """
 
-import pandas as pd
-import numpy as np
 import tensorflow as tf
-from src.midi_support import (
+from src.data_preparation import (
     MusicDataPreparer,
-    RNNMusicDataSetPreparer,
     load_midi_objs,
     load_nottingham_objs,
     load_just_that_one_test_song,
-    download_and_save_data,
 )
 from src.visualization import plot_piano_roll, save_audio_file
 from datetime import datetime

@@ -1,5 +1,5 @@
 import matplotlib.pyplot as plt
-from src.midi_support import MusicDataPreparer
+from src.data_preparation import MusicDataPreparer
 from IPython import display
 
 def note_and_artic_to_one(data, what="artic"):

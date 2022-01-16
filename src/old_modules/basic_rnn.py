@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import tensorflow as tf
-from src.midi_support import MusicDataPreparer, RNNMusicDataSetPreparer, load_midi_objs, load_nottingham_objs, load_just_that_one_test_song, download_and_save_data
+from src.data_preparation import MusicDataPreparer, load_midi_objs, load_nottingham_objs, load_just_that_one_test_song, download_and_save_data
 from src.visualization import plot_piano_roll, save_audio_file
 import pdb
 from datetime import datetime

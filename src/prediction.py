@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from src.midi_support import MusicDataPreparer
+from src.data_preparation import MusicDataPreparer
 from src.models import NoteTimeMusicPredictionRNN, NoteTimeMusicPredictionRNNShallow
 
 
