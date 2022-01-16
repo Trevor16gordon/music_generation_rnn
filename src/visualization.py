@@ -1,5 +1,5 @@
 import matplotlib.pyplot as plt
-from src.utils.midi_support import MidiSupport
+from src.midi_support import MidiSupport
 from IPython import display
 
 def note_and_artic_to_one(data, what="artic"):

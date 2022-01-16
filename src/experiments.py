@@ -12,7 +12,7 @@ In this model Experiments 1 - 9 are experiments that build up to the final model
 import pandas as pd
 import numpy as np
 import tensorflow as tf
-from src.utils.midi_support import (
+from src.midi_support import (
     MidiSupport,
     RNNMusicDataSetPreparer,
     load_midi_objs,
@@ -20,7 +20,7 @@ from src.utils.midi_support import (
     load_just_that_one_test_song,
     download_and_save_data,
 )
-from src.utils.visualization import plot_piano_roll, save_audio_file
+from src.visualization import plot_piano_roll, save_audio_file
 from datetime import datetime
 from src.models import *
 from src.prediction import *
