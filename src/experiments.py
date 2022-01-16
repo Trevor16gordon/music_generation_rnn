@@ -171,11 +171,20 @@ class RNNMusicExperiment:
 class RNNMusicExperimentTen(RNNMusicExperiment):
     """Exp using time / note network
 
-    Args:
-        RNNMusicExperimentTen ([type]): [description]
+    This experiment will:
+    - load midi files
+    - prepare dataset for training
+    - train model
+    - predict a music segment
+    - convert music segment and save as .wav file
     """
 
     def __init__(self, *args, dropout=0, **kwargs):
+        """Initialize
+
+        Args:
+            dropout (int, optional): Defaults to 0.
+        """
         super().__init__(*args, **kwargs)
         self.common_config["dropout"] = dropout
 
@@ -183,6 +192,8 @@ class RNNMusicExperimentTen(RNNMusicExperiment):
         return "Exp10"
 
     def run(self):
+        """Main entry to experiment.
+        """
         self.set_model()
         loaded_midi = self.load_data()
         self.prepared_data = self.prepare_data(loaded_midi)
@@ -194,18 +205,14 @@ class RNNMusicExperimentTen(RNNMusicExperiment):
         self.predict_and_save_data()
 
     def predict_and_save_data(self, str_id=""):
-
         print("Predicting data...")
         self.predicted, self.probs = self.predict_data(self.model, self.prepared_data)
         print("Saving data...")
         self.plot_and_save_predicted_data(self.predicted, str_id + "_predicted_")
         self.plot_and_save_predicted_data(self.probs, str_id + "_probs_")
         self.create_and_save_predicted_audio(self.predicted, str_id + "_music_")
-        # Save music file?
-        # Save music output plot?
 
     def prepare_data(self, loaded_data):
-        # seq_ds is in form X, y here
         X, y = MidiSupport().prepare_song_note_invariant_plus_beats_and_more(
             loaded_data, vicinity=24
         )
@@ -247,7 +254,7 @@ class RNNMusicExperimentTen(RNNMusicExperiment):
 
 
 class RNNMusicExperimentEleven(RNNMusicExperimentTen):
-    """Same as 10 but training on multiple songs
+    """Same as 10 but training on nottingham dataset.
 
     Args:
         RNNMusicExperimentEleven ([type]): [description]
